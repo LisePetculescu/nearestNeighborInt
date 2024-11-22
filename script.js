@@ -41,6 +41,7 @@ function pixelateImageWithVisualization(image, pixelSize) {
 
   // Function to draw the pixelated image step-by-step
   function drawStep() {
+    ctx.imageSmoothingEnabled = false;
     if (y >= newHeight) {
       return; // Done
     }
@@ -84,7 +85,7 @@ function pixelateImageWithVisualization(image, pixelSize) {
     }
 
     // Schedule the next step
-    setTimeout(drawStep, 3); // Adjust the delay for faster/slower animation
+    setTimeout(drawStep, 1); // Adjust the delay for faster/slower animation
   }
 
   // Start the visualization
@@ -98,7 +99,7 @@ document.getElementById("fileInput").addEventListener("change", function (event)
     const img = new Image();
     img.onload = function () {
       // Call the pixelateImageWithVisualization function
-      pixelateImageWithVisualization(img, 7); // Adjust the pixel size as needed
+      pixelateImageWithVisualization(img, 2); // Adjust the pixel size as needed
     };
     img.src = URL.createObjectURL(file);
   }

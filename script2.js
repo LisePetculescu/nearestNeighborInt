@@ -2,22 +2,32 @@ function pixelateImageWithVisualization(image, pixelSize) {
   const canvas = document.getElementById("canvas");
   const ctx = canvas.getContext("2d");
 
-  // Set canvas size to 400x800
-  const targetWidth = 400;
-  const targetHeight = 800;
-  canvas.width = targetWidth;
-  canvas.height = targetHeight;
+  // Set canvas size to accommodate both images side by side
+  const originalWidth = 200;
+  const originalHeight = 250;
+  const pixelatedWidth = 400; // Larger width for the pixelated image
+  const pixelatedHeight = 500; // Larger height for the pixelated image
+  canvas.width = originalWidth + pixelatedWidth;
+  canvas.height = pixelatedHeight + 50; // Extra space for labels
 
-  // Draw the image onto the canvas, scaling it to 400x800
-  ctx.drawImage(image, 0, 0, targetWidth, targetHeight);
+  // Draw the original image on the left side of the canvas
+  ctx.drawImage(image, 0, 0, originalWidth, originalHeight);
+
+  // Add label for the original image
+  ctx.font = "20px Arial";
+  ctx.fillStyle = "black";
+  ctx.fillText("Original Image", originalWidth / 4, originalHeight + 30);
+
+  // Draw the image onto the canvas, scaling it to the larger size
+  ctx.drawImage(image, originalWidth, 0, pixelatedWidth, pixelatedHeight);
 
   // Get the image data from the resized canvas
-  const imageData = ctx.getImageData(0, 0, targetWidth, targetHeight);
+  const imageData = ctx.getImageData(originalWidth, 0, pixelatedWidth, pixelatedHeight);
   const data = imageData.data;
 
   // Calculate the new dimensions for pixelation
-  const newWidth = Math.floor(targetWidth / pixelSize);
-  const newHeight = Math.floor(targetHeight / pixelSize);
+  const newWidth = Math.floor(pixelatedWidth / pixelSize);
+  const newHeight = Math.floor(pixelatedHeight / pixelSize);
 
   // Create a new canvas to store the pixelated image
   const tempCanvas = document.createElement("canvas");
@@ -25,96 +35,59 @@ function pixelateImageWithVisualization(image, pixelSize) {
   tempCanvas.height = newHeight;
   const tempCtx = tempCanvas.getContext("2d");
 
-  // Create an array to store pixel data for the smaller (pixelated) image
-  const tempImageData = tempCtx.createImageData(newWidth, newHeight);
+  // Draw the scaled-down image on the temporary canvas
+  tempCtx.drawImage(canvas, originalWidth, 0, pixelatedWidth, pixelatedHeight, 0, 0, newWidth, newHeight);
+
+  // Get the image data from the temporary canvas
+  const tempImageData = tempCtx.getImageData(0, 0, newWidth, newHeight);
   const tempData = tempImageData.data;
 
-  // Visualization variables
-  let x = 0,
-    y = 0;
+  // Variables for visualization
+  let x = 0;
+  let y = 0;
 
-  // Step 1: Draw the downscaled (smaller) version
-  function drawDownscaledStep() {
+  // Function to draw the pixelated image step-by-step
+  function drawStep() {
     if (y >= newHeight) {
-      // Proceed to upscaling visualization after downscaling is complete
-      y = 0;
-      x = 0;
-      setTimeout(drawUpscaledStep, 500); // Pause for a moment to visualize the smaller image
-      return;
-    }
-
-    // Calculate the corresponding pixel in the resized image
-    const originalX = Math.floor(x * pixelSize);
-    const originalY = Math.floor(y * pixelSize);
-
-    // Get the position of the pixel in the resized image's data array
-    const index = (originalY * targetWidth + originalX) * 4;
-
-    // Get the RGBA values of the nearest pixel
-    const r = data[index];
-    const g = data[index + 1];
-    const b = data[index + 2];
-    const a = data[index + 3];
-
-    // Set the pixel in the downscaled image
-    const tempIndex = (y * newWidth + x) * 4;
-    tempData[tempIndex] = r;
-    tempData[tempIndex + 1] = g;
-    tempData[tempIndex + 2] = b;
-    tempData[tempIndex + 3] = a;
-
-    // Put the updated data onto the temporary canvas
-    tempCtx.putImageData(tempImageData, 0, 0);
-
-    // Visualize the downscaled image on the main canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the main canvas
-    ctx.drawImage(tempCanvas, 0, 0, newWidth, newHeight, 0, 0, targetWidth, targetHeight);
-
-    // Update coordinates
-    x++;
-    if (x >= newWidth) {
-      x = 0;
-      y++;
-    }
-
-    // Schedule the next step
-    setTimeout(drawDownscaledStep, 10); // Adjust speed for downscaling visualization
-  }
-
-  // Step 2: Draw the upscaled (pixelated) version
-  function drawUpscaledStep() {
-    if (y >= newHeight) {
+      // Add label for the pixelated image
+      ctx.font = "20px Arial";
+      ctx.fillStyle = "black";
+      ctx.fillText("Pixelated Image", originalWidth + pixelatedWidth / 4, pixelatedHeight + 30);
       return; // Done
     }
 
     // Calculate the corresponding pixel in the resized image
-    const originalX = Math.floor(x * pixelSize);
-    const originalY = Math.floor(y * pixelSize);
+    const originalX = Math.round(x * pixelSize);
+    const originalY = Math.round(y * pixelSize);
 
     // Get the position of the pixel in the resized image's data array
-    const index = (originalY * targetWidth + originalX) * 4;
+    const index = (y * newWidth + x) * 4;
 
     // Get the RGBA values of the nearest pixel
-    const r = data[index];
-    const g = data[index + 1];
-    const b = data[index + 2];
-    const a = data[index + 3];
+    const r = tempData[index];
+    const g = tempData[index + 1];
+    const b = tempData[index + 2];
+    const a = tempData[index + 3];
 
-    // Set the pixel in the pixelated image
-    const tempIndex = (y * newWidth + x) * 4;
-    tempData[tempIndex] = r;
-    tempData[tempIndex + 1] = g;
-    tempData[tempIndex + 2] = b;
-    tempData[tempIndex + 3] = a;
+    // Set the RGBA values for the pixelated image
+    for (let dy = 0; dy < pixelSize; dy++) {
+      for (let dx = 0; dx < pixelSize; dx++) {
+        const px = originalX + dx;
+        const py = originalY + dy;
+        if (px < pixelatedWidth && py < pixelatedHeight) {
+          const pixelIndex = (py * pixelatedWidth + px) * 4;
+          data[pixelIndex] = r;
+          data[pixelIndex + 1] = g;
+          data[pixelIndex + 2] = b;
+          data[pixelIndex + 3] = a;
+        }
+      }
+    }
 
-    // Put the updated data onto the temporary canvas
-    tempCtx.putImageData(tempImageData, 0, 0);
+    // Draw the updated image data back to the canvas
+    ctx.putImageData(imageData, originalWidth, 0);
 
-    // Visualize the upscaled image on the main canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the main canvas
-    ctx.drawImage(tempCanvas, 0, 0, newWidth, newHeight, 0, 0, targetWidth, targetHeight);
-
-    // Update coordinates
+    // Move to the next pixel
     x++;
     if (x >= newWidth) {
       x = 0;
@@ -122,11 +95,11 @@ function pixelateImageWithVisualization(image, pixelSize) {
     }
 
     // Schedule the next step
-    setTimeout(drawUpscaledStep, 10); // Adjust speed for upscaling visualization
+    setTimeout(drawStep, 2); // Adjust the delay for faster/slower animation
   }
 
-  // Start with the downscaled visualization
-  drawDownscaledStep();
+  // Start the visualization
+  drawStep();
 }
 
 // Handle file input to load the image
@@ -136,7 +109,7 @@ document.getElementById("fileInput").addEventListener("change", function (event)
     const img = new Image();
     img.onload = function () {
       // Call the pixelateImageWithVisualization function
-      pixelateImageWithVisualization(img, 10); // Adjust the pixel size as needed
+      pixelateImageWithVisualization(img, 4); // Adjust the pixel size as needed
     };
     img.src = URL.createObjectURL(file);
   }
