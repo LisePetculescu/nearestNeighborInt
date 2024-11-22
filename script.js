@@ -2,17 +2,20 @@ function pixelateImageWithVisualization(image, pixelSize) {
   const canvas = document.getElementById("canvas");
   const ctx = canvas.getContext("2d");
 
-  // Set canvas size to 200x400
+  // Set canvas size to accommodate both images side by side
   const targetWidth = 400;
-  const targetHeight = 800;
-  canvas.width = targetWidth;
+  const targetHeight = 500;
+  canvas.width = targetWidth * 2;
   canvas.height = targetHeight;
 
-  // Draw the image onto the canvas, scaling it to 200x400
+  // Draw the original image on the left side of the canvas
   ctx.drawImage(image, 0, 0, targetWidth, targetHeight);
 
+  // Draw the image onto the canvas, scaling it to 200x400
+  ctx.drawImage(image, targetWidth, 0, targetWidth, targetHeight);
+
   // Get the image data from the resized canvas
-  const imageData = ctx.getImageData(0, 0, targetWidth, targetHeight);
+  const imageData = ctx.getImageData(targetWidth, 0, targetWidth, targetHeight);
   const data = imageData.data;
 
   // Calculate the new dimensions for pixelation
@@ -25,23 +28,27 @@ function pixelateImageWithVisualization(image, pixelSize) {
   tempCanvas.height = newHeight;
   const tempCtx = tempCanvas.getContext("2d");
 
-  // Create an array to store pixel data for the smaller (pixelated) image
-  const tempImageData = tempCtx.createImageData(newWidth, newHeight);
+  // Draw the scaled-down image on the temporary canvas
+  tempCtx.drawImage(canvas, targetWidth, 0, targetWidth, targetHeight, 0, 0, newWidth, newHeight);
+
+  // Get the image data from the temporary canvas
+  const tempImageData = tempCtx.getImageData(0, 0, newWidth, newHeight);
   const tempData = tempImageData.data;
 
   // Variables for visualization
-  let x = 0,
-    y = 0;
+  let x = 0;
+  let y = 0;
 
   // Function to draw the pixelated image step-by-step
   function drawStep() {
+    ctx.imageSmoothingEnabled = false; // Disable smoothing for nearest neighbor interpolation
     if (y >= newHeight) {
       return; // Done
     }
 
     // Calculate the corresponding pixel in the resized image
-    const originalX = Math.floor(x * pixelSize);
-    const originalY = Math.floor(y * pixelSize);
+    const originalX = Math.round(x * pixelSize);
+    const originalY = Math.round(y * pixelSize);
 
     // Get the position of the pixel in the resized image's data array
     const index = (originalY * targetWidth + originalX) * 4;
@@ -52,20 +59,25 @@ function pixelateImageWithVisualization(image, pixelSize) {
     const b = data[index + 2];
     const a = data[index + 3];
 
-    // Set the pixel in the pixelated image
-    const tempIndex = (y * newWidth + x) * 4;
-    tempData[tempIndex] = r;
-    tempData[tempIndex + 1] = g;
-    tempData[tempIndex + 2] = b;
-    tempData[tempIndex + 3] = a;
+    // Set the RGBA values for the pixelated image
+    for (let dy = 0; dy < pixelSize; dy++) {
+      for (let dx = 0; dx < pixelSize; dx++) {
+        const px = x * pixelSize + dx;
+        const py = y * pixelSize + dy;
+        if (px < targetWidth && py < targetHeight) {
+          const pixelIndex = (py * targetWidth + px) * 4;
+          data[pixelIndex] = r;
+          data[pixelIndex + 1] = g;
+          data[pixelIndex + 2] = b;
+          data[pixelIndex + 3] = a;
+        }
+      }
+    }
 
-    // Put the updated data onto the temporary canvas
-    tempCtx.putImageData(tempImageData, 0, 0);
+    // Draw the updated image data back to the canvas
+    ctx.putImageData(imageData, targetWidth, 0);
 
-    // Scale and draw the temporary canvas onto the main canvas
-    ctx.drawImage(tempCanvas, 0, 0, newWidth, newHeight, 0, 0, targetWidth, targetHeight);
-
-    // Update coordinates
+    // Move to the next pixel
     x++;
     if (x >= newWidth) {
       x = 0;
