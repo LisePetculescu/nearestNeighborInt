@@ -41,7 +41,6 @@ function pixelateImageWithVisualization(image, pixelSize) {
 
   // Function to draw the pixelated image step-by-step
   function drawStep() {
-    ctx.imageSmoothingEnabled = false; // Disable smoothing for nearest neighbor interpolation
     if (y >= newHeight) {
       return; // Done
     }
@@ -51,19 +50,19 @@ function pixelateImageWithVisualization(image, pixelSize) {
     const originalY = Math.round(y * pixelSize);
 
     // Get the position of the pixel in the resized image's data array
-    const index = (originalY * targetWidth + originalX) * 4;
+    const index = (y * newWidth + x) * 4;
 
     // Get the RGBA values of the nearest pixel
-    const r = data[index];
-    const g = data[index + 1];
-    const b = data[index + 2];
-    const a = data[index + 3];
+    const r = tempData[index];
+    const g = tempData[index + 1];
+    const b = tempData[index + 2];
+    const a = tempData[index + 3];
 
     // Set the RGBA values for the pixelated image
     for (let dy = 0; dy < pixelSize; dy++) {
       for (let dx = 0; dx < pixelSize; dx++) {
-        const px = x * pixelSize + dx;
-        const py = y * pixelSize + dy;
+        const px = originalX + dx;
+        const py = originalY + dy;
         if (px < targetWidth && py < targetHeight) {
           const pixelIndex = (py * targetWidth + px) * 4;
           data[pixelIndex] = r;
